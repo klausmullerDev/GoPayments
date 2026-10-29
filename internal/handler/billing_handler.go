@@ -35,3 +35,4 @@ func (h *BillingHandler) PremiumContent(c *gin.Context) {
 		"message": "🎉 Bem-vindo à área exclusiva de assinantes ativos do GoPayments!",
 	})
 }
+
