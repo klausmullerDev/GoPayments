@@ -90,3 +90,4 @@ func (h *PlanHandler) Deactivate(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "plano desativado com sucesso"})
 }
+
