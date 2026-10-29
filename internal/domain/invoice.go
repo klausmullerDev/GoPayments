@@ -42,3 +42,4 @@ func (i *Invoice) BeforeCreate(tx *gorm.DB) error {
 type InvoiceRepository interface {
 	ListByUserID(ctx context.Context, userID uuid.UUID) ([]Invoice, error)
 }
+
