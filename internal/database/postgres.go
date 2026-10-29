@@ -50,7 +50,7 @@ func NewPostgresDB(cfg *config.Config) (*gorm.DB, error) {
 
 // RunMigrations executa o AutoMigrate do GORM para criar/atualizar as tabelas do domínio.
 func RunMigrations(db *gorm.DB) error {
-	if err := db.AutoMigrate(&domain.User{}); err != nil {
+	if err := db.AutoMigrate(&domain.User{}, &domain.Plan{}); err != nil {
 		return fmt.Errorf("falha ao executar migrations: %w", err)
 	}
 	log.Println("✅ Migrations executadas com sucesso")

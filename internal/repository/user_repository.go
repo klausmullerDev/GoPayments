@@ -55,3 +55,4 @@ func (r *userRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.Us
 	}
 	return &user, nil
 }
+

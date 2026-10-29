@@ -12,3 +12,4 @@ var (
 	ErrSubscriptionNotFound      = errors.New("nenhuma assinatura encontrada para este usuário")
 	ErrSubscriptionAlreadyCancel = errors.New("esta assinatura já está cancelada")
 )
+
