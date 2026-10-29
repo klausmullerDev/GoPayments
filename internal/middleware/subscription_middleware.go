@@ -37,3 +37,4 @@ func RequireActiveSubscription(subService *service.SubscriptionService) gin.Hand
 		c.Next()
 	}
 }
+
