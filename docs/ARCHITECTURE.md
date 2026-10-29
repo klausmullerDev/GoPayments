@@ -136,3 +136,4 @@ sequenceDiagram
     end
     S-->>W: Resumo do Processamento (Sucessos / Falhas)
 ```
+

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/klausmullerDev/GoPayments/internal/config"
+	"github.com/klausmullerDev/GoPayments/internal/domain"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -46,4 +47,14 @@ func NewPostgresDB(cfg *config.Config) (*gorm.DB, error) {
 	log.Println("✅ Conexão com PostgreSQL estabelecida com sucesso via GORM")
 	return db, nil
 }
+
+// RunMigrations executa o AutoMigrate do GORM para criar/atualizar as tabelas do domínio.
+func RunMigrations(db *gorm.DB) error {
+	if err := db.AutoMigrate(&domain.User{}); err != nil {
+		return fmt.Errorf("falha ao executar migrations: %w", err)
+	}
+	log.Println("✅ Migrations executadas com sucesso")
+	return nil
+}
+
 

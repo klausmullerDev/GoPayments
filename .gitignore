@@ -36,3 +36,4 @@ go.work
 
 # Docker volumes (if mapped locally)
 postgres_data/
+

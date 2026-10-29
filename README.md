@@ -96,3 +96,4 @@ Este projeto é desenvolvido utilizando **Feature Branches** e **Conventional Co
 - `feat/subscriptions`: Adesão, consulta e cancelamento de assinaturas + transações.
 - `feat/billing-worker`: Motor de faturamento recorrente (Goroutine) e rota exclusiva de assinante.
 - `test/unit-and-docs`: Testes unitários nas camadas de `service` e documentação Swagger.
+
