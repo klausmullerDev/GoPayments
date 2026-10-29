@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/klausmullerDev/GoPayments/internal/config"
 	"github.com/klausmullerDev/GoPayments/internal/database"
+	"github.com/klausmullerDev/GoPayments/internal/domain"
 	"github.com/klausmullerDev/GoPayments/internal/handler"
 	"github.com/klausmullerDev/GoPayments/internal/middleware"
 	"github.com/klausmullerDev/GoPayments/internal/repository"
@@ -33,10 +34,14 @@ func main() {
 
 	// 4. Injeção de Dependências (Repositories -> Services -> Handlers)
 	userRepo := repository.NewUserRepository(db)
+	planRepo := repository.NewPlanRepository(db)
+
 	authService := service.NewAuthService(userRepo, cfg.JWTSecret, cfg.JWTExpirationHours)
+	planService := service.NewPlanService(planRepo)
 
 	healthHandler := handler.NewHealthHandler(db)
 	authHandler := handler.NewAuthHandler(authService)
+	planHandler := handler.NewPlanHandler(planService)
 
 	// 5. Registrar rotas v1
 	v1 := router.Group("/api/v1")
@@ -48,6 +53,20 @@ func main() {
 			auth.POST("/register", authHandler.Register)
 			auth.POST("/login", authHandler.Login)
 			auth.GET("/me", middleware.AuthMiddleware(authService), authHandler.Me)
+		}
+
+		plans := v1.Group("/plans")
+		{
+			plans.GET("", planHandler.List)
+			plans.GET("/:id", planHandler.GetByID)
+
+			// Rotas administrativas protegidas por JWT + Role ADMIN
+			adminPlans := plans.Group("")
+			adminPlans.Use(middleware.AuthMiddleware(authService), middleware.RequireRole(domain.RoleAdmin))
+			{
+				adminPlans.POST("", planHandler.Create)
+				adminPlans.PATCH("/:id/deactivate", planHandler.Deactivate)
+			}
 		}
 	}
 
