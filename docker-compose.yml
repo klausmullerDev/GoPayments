@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: gopay_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-gopay_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-gopay_secret}
+      POSTGRES_DB: ${DB_NAME:-gopay_db}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - gopay_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-gopay_user} -d ${DB_NAME:-gopay_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  gopay_pgdata:
+
