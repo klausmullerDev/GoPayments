@@ -60,3 +60,4 @@ type SubscriptionRepository interface {
 	FindDueSubscriptions(ctx context.Context, now time.Time) ([]Subscription, error)
 	ProcessRenewalTransaction(ctx context.Context, subID uuid.UUID, invoice *Invoice, nextStart, nextBilling time.Time) error
 }
+

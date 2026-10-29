@@ -30,3 +30,4 @@ func (r *invoiceRepository) ListByUserID(ctx context.Context, userID uuid.UUID) 
 	}
 	return invoices, nil
 }
+

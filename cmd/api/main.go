@@ -1,8 +1,14 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log"
+	"net/http"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/klausmullerDev/GoPayments/internal/config"
@@ -12,6 +18,7 @@ import (
 	"github.com/klausmullerDev/GoPayments/internal/middleware"
 	"github.com/klausmullerDev/GoPayments/internal/repository"
 	"github.com/klausmullerDev/GoPayments/internal/service"
+	"github.com/klausmullerDev/GoPayments/internal/worker"
 )
 
 func main() {
@@ -41,11 +48,13 @@ func main() {
 	authService := service.NewAuthService(userRepo, cfg.JWTSecret, cfg.JWTExpirationHours)
 	planService := service.NewPlanService(planRepo)
 	subService := service.NewSubscriptionService(subRepo, planRepo, invoiceRepo)
+	billingService := service.NewBillingService(subRepo)
 
 	healthHandler := handler.NewHealthHandler(db)
 	authHandler := handler.NewAuthHandler(authService)
 	planHandler := handler.NewPlanHandler(planService)
 	subHandler := handler.NewSubscriptionHandler(subService)
+	billingHandler := handler.NewBillingHandler(billingService)
 
 	authMiddleware := middleware.AuthMiddleware(authService)
 
@@ -66,7 +75,6 @@ func main() {
 			plans.GET("", planHandler.List)
 			plans.GET("/:id", planHandler.GetByID)
 
-			// Rotas administrativas protegidas por JWT + Role ADMIN
 			adminPlans := plans.Group("")
 			adminPlans.Use(authMiddleware, middleware.RequireRole(domain.RoleAdmin))
 			{
@@ -75,7 +83,6 @@ func main() {
 			}
 		}
 
-		// Rotas de Assinaturas e Faturas do Cliente (protegidas por JWT)
 		subscriptions := v1.Group("/subscriptions")
 		subscriptions.Use(authMiddleware)
 		{
@@ -89,12 +96,49 @@ func main() {
 		{
 			invoices.GET("/me", subHandler.ListMyInvoices)
 		}
+
+		// Motor de cobrança recorrente (acionamento manual para ADMIN)
+		billing := v1.Group("/billing")
+		billing.Use(authMiddleware, middleware.RequireRole(domain.RoleAdmin))
+		{
+			billing.POST("/process", billingHandler.ProcessDue)
+		}
+
+		// Rota protegida por assinatura ativa (JWT + RequireActiveSubscription)
+		content := v1.Group("/content")
+		content.Use(authMiddleware, middleware.RequireActiveSubscription(subService))
+		{
+			content.GET("/premium", billingHandler.PremiumContent)
+		}
 	}
 
-	// 6. Iniciar servidor HTTP
-	addr := fmt.Sprintf(":%s", cfg.Port)
-	log.Printf("🚀 GoPayments API rodando em http://localhost%s", addr)
-	if err := router.Run(addr); err != nil {
-		log.Fatalf("❌ Erro ao iniciar servidor HTTP: %v", err)
+	// 6. Iniciar Worker de cobrança recorrente em Goroutine com Graceful Shutdown
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	billingWorker := worker.NewBillingWorker(billingService, 1*time.Minute)
+	go billingWorker.Start(ctx)
+
+	// 7. Iniciar servidor HTTP com suporte a Graceful Shutdown
+	srv := &http.Server{
+		Addr:    fmt.Sprintf(":%s", cfg.Port),
+		Handler: router,
 	}
+
+	go func() {
+		log.Printf("🚀 GoPayments API rodando em http://localhost%s", srv.Addr)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalf("❌ Erro ao iniciar servidor HTTP: %v", err)
+		}
+	}()
+
+	<-ctx.Done()
+	log.Println("🛑 Sinal de encerramento recebido, desligando servidor HTTP...")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Printf("⚠️ Erro no desligamento forçado do servidor: %v", err)
+	}
+	log.Println("✅ Servidor encerrado com sucesso")
 }

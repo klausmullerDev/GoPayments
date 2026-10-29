@@ -114,3 +114,4 @@ func (h *SubscriptionHandler) ListMyInvoices(c *gin.Context) {
 
 	c.JSON(http.StatusOK, invoices)
 }
+

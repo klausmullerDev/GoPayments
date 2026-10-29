@@ -142,3 +142,4 @@ func CalculateNextBillingDate(from time.Time, interval domain.PlanInterval) time
 	}
 	return from.AddDate(0, 1, 0)
 }
+
