@@ -49,3 +49,4 @@ func (s *PlanService) GetPlanByID(ctx context.Context, id uuid.UUID) (*domain.Pl
 func (s *PlanService) DeactivatePlan(ctx context.Context, id uuid.UUID) error {
 	return s.planRepo.Deactivate(ctx, id)
 }
+

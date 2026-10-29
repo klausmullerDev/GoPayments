@@ -35,13 +35,19 @@ func main() {
 	// 4. Injeção de Dependências (Repositories -> Services -> Handlers)
 	userRepo := repository.NewUserRepository(db)
 	planRepo := repository.NewPlanRepository(db)
+	subRepo := repository.NewSubscriptionRepository(db)
+	invoiceRepo := repository.NewInvoiceRepository(db)
 
 	authService := service.NewAuthService(userRepo, cfg.JWTSecret, cfg.JWTExpirationHours)
 	planService := service.NewPlanService(planRepo)
+	subService := service.NewSubscriptionService(subRepo, planRepo, invoiceRepo)
 
 	healthHandler := handler.NewHealthHandler(db)
 	authHandler := handler.NewAuthHandler(authService)
 	planHandler := handler.NewPlanHandler(planService)
+	subHandler := handler.NewSubscriptionHandler(subService)
+
+	authMiddleware := middleware.AuthMiddleware(authService)
 
 	// 5. Registrar rotas v1
 	v1 := router.Group("/api/v1")
@@ -52,7 +58,7 @@ func main() {
 		{
 			auth.POST("/register", authHandler.Register)
 			auth.POST("/login", authHandler.Login)
-			auth.GET("/me", middleware.AuthMiddleware(authService), authHandler.Me)
+			auth.GET("/me", authMiddleware, authHandler.Me)
 		}
 
 		plans := v1.Group("/plans")
@@ -62,11 +68,26 @@ func main() {
 
 			// Rotas administrativas protegidas por JWT + Role ADMIN
 			adminPlans := plans.Group("")
-			adminPlans.Use(middleware.AuthMiddleware(authService), middleware.RequireRole(domain.RoleAdmin))
+			adminPlans.Use(authMiddleware, middleware.RequireRole(domain.RoleAdmin))
 			{
 				adminPlans.POST("", planHandler.Create)
 				adminPlans.PATCH("/:id/deactivate", planHandler.Deactivate)
 			}
+		}
+
+		// Rotas de Assinaturas e Faturas do Cliente (protegidas por JWT)
+		subscriptions := v1.Group("/subscriptions")
+		subscriptions.Use(authMiddleware)
+		{
+			subscriptions.POST("", subHandler.Subscribe)
+			subscriptions.GET("/me", subHandler.GetMe)
+			subscriptions.PATCH("/cancel", subHandler.Cancel)
+		}
+
+		invoices := v1.Group("/invoices")
+		invoices.Use(authMiddleware)
+		{
+			invoices.GET("/me", subHandler.ListMyInvoices)
 		}
 	}
 

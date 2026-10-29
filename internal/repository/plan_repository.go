@@ -60,3 +60,4 @@ func (r *planRepository) Deactivate(ctx context.Context, id uuid.UUID) error {
 	}
 	return nil
 }
+

@@ -52,3 +52,4 @@ type PlanRepository interface {
 	FindByID(ctx context.Context, id uuid.UUID) (*Plan, error)
 	Deactivate(ctx context.Context, id uuid.UUID) error
 }
+
